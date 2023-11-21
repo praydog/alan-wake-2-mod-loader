@@ -26,9 +26,9 @@ LooseFileHook::LooseFileHook() {
     const auto rva = *fn - (uintptr_t)game;
     SPDLOG_INFO("[LooseFileHook] Found ShouldUseLooseFile at {:x} (RVA {:x})", *fn, rva);
 
-    m_hook = safetyhook::create_inline((void*)*fn, (void*)should_use_loose_file_hook);
+    m_should_use_loose_file_hook = safetyhook::create_inline((void*)*fn, (void*)should_use_loose_file_hook);
 
-    if (!m_hook) {
+    if (!m_should_use_loose_file_hook) {
         SPDLOG_ERROR("[LooseFileHook] Failed to hook ShouldUseLooseFile!");
         return;
     }
@@ -37,8 +37,8 @@ LooseFileHook::LooseFileHook() {
 
     if (adaptor_filesystem_vtable) {
         SPDLOG_INFO("[LooseFileHook] Found Loader_Adaptor_FileSystem vtable at 0x{:X}", *adaptor_filesystem_vtable);
-        auto& should_load_file_fn = ((uintptr_t*)*adaptor_filesystem_vtable)[1];
 
+        auto& should_load_file_fn = ((uintptr_t*)*adaptor_filesystem_vtable)[1];
         SPDLOG_INFO("[LooseFileHook] Found r::Loader_Adaptor_FileSystem::ShouldLoadFile function at 0x{:X}", should_load_file_fn);
         m_filesystem_should_load_file_hook = std::make_unique<PointerHook>((void**)&should_load_file_fn, (void*)filesystem_should_load_file);
     } else {
@@ -50,24 +50,10 @@ LooseFileHook::LooseFileHook() {
     if (adaptor_pack2_vtable) {
         SPDLOG_INFO("[LooseFileHook] Found Loader_Adaptor_Pack2 vtable at 0x{:X}", *adaptor_pack2_vtable);
 
-        const auto& vfunc = ((uintptr_t*)*adaptor_pack2_vtable)[1];
-        const auto& vfunc_load = ((uintptr_t*)*adaptor_pack2_vtable)[2];
-
-        utility::exhaustive_decode((uint8_t*)vfunc, 500, [&](utility::ExhaustionContext& ctx) -> utility::ExhaustionResult {
-            m_addresses_in_path.push_back(ctx.addr);
-            if (std::string_view{ctx.instrux.Mnemonic}.starts_with("CALL")) {
-                return utility::ExhaustionResult::STEP_OVER;
-            }
-            return utility::ExhaustionResult::CONTINUE;
-        });
-
-        utility::exhaustive_decode((uint8_t*)vfunc_load, 500, [&](utility::ExhaustionContext& ctx) -> utility::ExhaustionResult {
-            m_addresses_in_path_load.push_back(ctx.addr);
-            if (std::string_view{ctx.instrux.Mnemonic}.starts_with("CALL")) {
-                return utility::ExhaustionResult::STEP_OVER;
-            }
-            return utility::ExhaustionResult::CONTINUE;
-        });
+        auto& vfunc = ((uintptr_t*)*adaptor_pack2_vtable)[1];
+        auto& vfunc_load = ((uintptr_t*)*adaptor_pack2_vtable)[2];
+        SPDLOG_INFO("[LooseFileHook] Found r::Loader_Adaptor_Pack2::ShouldLoadFile function at 0x{:X}", vfunc);
+        SPDLOG_INFO("[LooseFileHook] Found r::Loader_Adaptor_Pack2::LoadFile function at 0x{:X}", vfunc_load);
 
         m_pack2_should_load_file_hook = std::make_unique<PointerHook>((void**)&vfunc, (void*)pack2_should_load_file);
         m_pack2_load_file_hook = std::make_unique<PointerHook>((void**)&vfunc_load, (void*)pack2_load_file);
@@ -78,8 +64,7 @@ LooseFileHook::LooseFileHook() {
     const auto hotload_cache_vtable = utility::rtti::find_vtable(utility::get_executable(), "class r::Loader_Adaptor_HotloadDataCache");
 
     if (hotload_cache_vtable) {
-        const auto& hotload_cache_vfunc = ((uintptr_t*)*hotload_cache_vtable)[1];
-
+        auto& hotload_cache_vfunc = ((uintptr_t*)*hotload_cache_vtable)[1];
         m_hotload_cache_should_load_file_hook = std::make_unique<PointerHook>((void**)&hotload_cache_vfunc, (void*)hotload_cache_should_load_file);
     } else {
         SPDLOG_ERROR("[LooseFileHook] Failed to find Loader_Adaptor_HotloadDataCache vtable!");
@@ -135,7 +120,7 @@ __forceinline bool LooseFileHook::should_use_loose_file(sdk::RemedyString* path)
 
 uint64_t LooseFileHook::should_use_loose_file_hook(sdk::RemedyString* path, void* rdx, void* r8, void* r9) {
     // its a bool but whatever
-    uint64_t result = g_loose_file_hook->m_hook.unsafe_call<uint64_t>(path, rdx, r8, r9);
+    uint64_t result = g_loose_file_hook->m_should_use_loose_file_hook.unsafe_call<uint64_t>(path, rdx, r8, r9);
 
     // well, original func is already returning true... so...
     if (result & 1 != 0) {

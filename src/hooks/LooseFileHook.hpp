@@ -26,18 +26,11 @@ private:
     static bool filesystem_should_load_file(sdk::LoaderAdaptor* rcx, sdk::RemedyString* filepath, uint64_t r8, void* r9);
     static bool hotload_cache_should_load_file(sdk::LoaderAdaptor* rcx, sdk::RemedyString* filepath, void* r8, void* r9);
 
-    std::mutex m_mutex{};
-    std::unordered_set<std::string> m_precached_files{};
-    SafetyHookInline m_hook{};
+    SafetyHookInline m_should_use_loose_file_hook{};
     std::unique_ptr<PointerHook> m_pack2_should_load_file_hook{};
     std::unique_ptr<PointerHook> m_pack2_load_file_hook{};
     std::unique_ptr<PointerHook> m_filesystem_should_load_file_hook{};
     std::unique_ptr<PointerHook> m_hotload_cache_should_load_file_hook{};
-
-    std::unordered_set<uintptr_t> m_known_return_addresses{};
-    std::vector<uintptr_t> m_addresses_in_path{};
-    std::unordered_set<uintptr_t> m_known_return_addresses_load{};
-    std::vector<uintptr_t> m_addresses_in_path_load{};
 
     sdk::LoaderAdaptor* m_last_pack2_adaptor{nullptr};
     sdk::LoaderAdaptor* m_last_filesystem_adaptor{nullptr};
