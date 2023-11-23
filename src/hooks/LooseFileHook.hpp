@@ -16,6 +16,8 @@ public:
     virtual ~LooseFileHook();
 
 private:
+    static bool should_log_file_pack2(sdk::RemedyString* path);
+
     // This function is called in a few places and is generally the main thing used to determine whether it's loaded from disk or not
     // however it's much more complicated than that which is why we have a bunch of other hooks
     bool should_use_loose_file(sdk::RemedyString* path);
