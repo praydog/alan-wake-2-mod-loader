@@ -14,6 +14,15 @@ Can usually just extract any mod into the game directory with its original RMDTO
 
 ![WinRAR_2023-11-20_19-01-40](https://github.com/praydog/alan-wake-2-mod-loader/assets/2909949/fcb16b62-9aca-4185-8ee6-0d3d276fef95)
 
+## Custom command line arguments
+
+* `-logpack2`
+    * Log files that are being actively accessed by the game
+* `-logpack2_exts "ext"`
+    * Log files with specific extensions
+    * e.g. `-logpack2_exts "wem,tex"`
+    * Must have quotes
+
 ## Limitations
 
 Unknown at this time. Tested on a few mods but not aware of any issues yet.
